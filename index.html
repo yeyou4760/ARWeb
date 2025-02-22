@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markerless AR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@webxr-polyfill/webxr-polyfill.js"></script>
+</head>
+<body style="margin: 0; overflow: hidden;">
+    <script>
+        if (navigator.xr) {
+            navigator.xr.isSessionSupported("immersive-ar").then((supported) => {
+                if (supported) {
+                    document.body.innerHTML = "<button id='start-ar'>Start AR</button>";
+                    document.getElementById('start-ar').addEventListener("click", startAR);
+                } else {
+                    alert("WebXR not supported on this device.");
+                }
+            });
+        } else {
+            alert("WebXR not available.");
+        }
+
+        async function startAR() {
+            let session = await navigator.xr.requestSession("immersive-ar", { requiredFeatures: ["hit-test"] });
+            let gl = document.createElement("canvas").getContext("webgl");
+            let renderer = new THREE.WebGLRenderer({ alpha: true, canvas: gl.canvas });
+            document.body.appendChild(renderer.domElement);
+            
+            let scene = new THREE.Scene();
+            let camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+            let light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+            scene.add(light);
+
+            let geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            let material = new THREE.MeshBasicMaterial({ color: "blue" });
+            let cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
+
+            session.requestReferenceSpace("local").then((refSpace) => {
+                let xrViewerPose;
+                session.requestAnimationFrame((time, frame) => {
+                    let pose = frame.getViewerPose(refSpace);
+                    if (pose) {
+                        xrViewerPose = pose;
+                        renderer.render(scene, camera);
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
